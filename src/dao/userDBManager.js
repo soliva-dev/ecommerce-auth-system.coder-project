@@ -113,10 +113,10 @@ export class userDBManager {
                 throw new Error('Usuario no encontrado');
             }
             
-            console.log('✅ Contraseña actualizada para usuario:', result.email);
+            console.log('Contraseña actualizada para usuario:', result.email);
             return result;
         } catch (error) {
-            console.error('❌ Error actualizando contraseña:', error);
+            console.error('Error actualizando contraseña:', error);
             throw error;
         }
     }

@@ -216,7 +216,7 @@ const resetUrl = `${req.protocol}://${req.get('host')}/api/sessions/reset-passwo
         });
 
     } catch (error) {
-        console.error('❌ Error en forgot-password:', error);
+        console.error('Error en forgot-password:', error);
         res.status(500).send({
             status: 'error',
             message: 'Error interno del servidor'
@@ -267,7 +267,7 @@ await ResetTokenService.markTokenAsUsed(token);
         });
 
     } catch (error) {
-        console.error('❌ Error en reset-password:', error);
+        console.error('Error en reset-password:', error);
         
         if (error.message === 'Token inválido o expirado') {
             return res.status(400).send({

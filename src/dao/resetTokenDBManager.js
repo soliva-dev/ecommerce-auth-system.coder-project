@@ -21,7 +21,7 @@ export class resetTokenDBManager {
             });
 
             const result = await resetToken.save();
-            console.log('✅ Token de reset creado:', result._id);
+            console.log('Token de reset creado:', result._id);
             
             return {
                 _id: result._id,
@@ -31,7 +31,7 @@ export class resetTokenDBManager {
                 expiresAt: new Date(result.createdAt.getTime() + 3600000) // +1 hora
             };
         } catch (error) {
-            console.error('❌ Error creando token de reset:', error);
+            console.error('Error creando token de reset:', error);
             throw new Error('Error creando token de recuperación');
         }
     }
@@ -51,7 +51,7 @@ export class resetTokenDBManager {
 
             return resetToken;
         } catch (error) {
-            console.error('❌ Error buscando token:', error);
+            console.error('Error buscando token:', error);
             throw error;
         }
     }
@@ -68,10 +68,10 @@ export class resetTokenDBManager {
                 throw new Error('Token no encontrado o ya usado');
             }
 
-            console.log('✅ Token marcado como usado:', token.substring(0, 8) + '...');
+            console.log('Token marcado como usado:', token.substring(0, 8) + '...');
             return true;
         } catch (error) {
-            console.error('❌ Error marcando token como usado:', error);
+            console.error('Error marcando token como usado:', error);
             throw error;
         }
     }
@@ -85,7 +85,7 @@ export class resetTokenDBManager {
             console.log(`🧹 Tokens expirados eliminados: ${result.deletedCount}`);
             return result.deletedCount;
         } catch (error) {
-            console.error('❌ Error limpiando tokens expirados:', error);
+            console.error('Error limpiando tokens expirados:', error);
             throw error;
         }
     }
@@ -94,7 +94,7 @@ export class resetTokenDBManager {
         try {
             return await ResetTokenModel.find({ userId }).sort({ createdAt: -1 });
         } catch (error) {
-            console.error('❌ Error obteniendo tokens del usuario:', error);
+            console.error('Error obteniendo tokens del usuario:', error);
             throw error;
         }
     }

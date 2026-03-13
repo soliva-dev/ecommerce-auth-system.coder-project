@@ -24,11 +24,11 @@ const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/entrega-final'
 mongoose.connect(uri);
 
 mongoose.connection.on('connected', () => {
-    console.log('✅ Conectado a MongoDB Atlas exitosamente');
+    console.log('Conectado a MongoDB Atlas exitosamente');
 });
 
 mongoose.connection.on('error', (error) => {
-    console.error('❌ Error en la conexión a MongoDB:', error);
+    console.error('Error en la conexión a MongoDB:', error);
 });
 
 app.engine('handlebars', handlebars.engine());
@@ -61,10 +61,10 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 const httpServer = app.listen(PORT, () => {
-    console.log(`🚀 Start server in PORT ${PORT}`);
-    console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-    console.log(`🔐 API Sessions: http://localhost:${PORT}/api/sessions`);
-    console.log(`👥 API Users: http://localhost:${PORT}/api/users`);
+    console.log(`Start server in PORT ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`API Sessions: http://localhost:${PORT}/api/sessions`);
+    console.log(`API Users: http://localhost:${PORT}/api/users`);
 });
 
 const io = new Server(httpServer);

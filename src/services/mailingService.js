@@ -19,7 +19,7 @@ class MailingService {
             const mailOptions = {
                 from: process.env.GMAIL_USER,
                 to: userEmail,
-                subject: '🔐 Restablecer Contraseña - E-commerce Backend',
+                subject: 'Restablecer Contraseña - E-commerce Backend',
                 html: `
                     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
                         <h2 style="color: #333; text-align: center;">Restablecer Contraseña</h2>
@@ -49,13 +49,13 @@ class MailingService {
             };
 
             const result = await this.transporter.sendMail(mailOptions);
-            console.log('✅ Email de recuperación enviado:', result.messageId);
+            console.log('Email de recuperación enviado:', result.messageId);
             return {
                 success: true,
                 messageId: result.messageId
             };
         } catch (error) {
-            console.error('❌ Error enviando email:', error);
+            console.error('Error enviando email:', error);
             throw new Error('Error enviando email de recuperación');
         }
     }
@@ -65,7 +65,7 @@ class MailingService {
             const mailOptions = {
                 from: process.env.GMAIL_USER,
                 to: userEmail,
-                subject: '🎉 ¡Bienvenido a nuestro E-commerce!',
+                subject: 'Bienvenido a nuestro E-commerce',
                 html: `
                     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
                         <h2 style="color: #28a745; text-align: center;">¡Bienvenido!</h2>
@@ -82,13 +82,13 @@ class MailingService {
             };
 
             const result = await this.transporter.sendMail(mailOptions);
-            console.log('✅ Email de bienvenida enviado:', result.messageId);
+            console.log('Email de bienvenida enviado:', result.messageId);
             return {
                 success: true,
                 messageId: result.messageId
             };
         } catch (error) {
-            console.error('❌ Error enviando email de bienvenida:', error);
+            console.error('Error enviando email de bienvenida:', error);
             // No arrojar error para bienvenida, es opcional
             return {
                 success: false,
