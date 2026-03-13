@@ -1,20 +1,20 @@
 import { Router } from 'express';
 import passport from '../config/passport.js';
 import { userDBManager } from '../dao/userDBManager.js';
+import { resetTokenDBManager } from '../dao/resetTokenDBManager.js';
 import { JWTUtils } from '../utils/jwtUtil.js';
+import { CurrentUserDTO } from '../dto/userDTO.js';
+import mailingService from '../services/mailingService.js';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 const UserService = new userDBManager();
+const ResetTokenService = new resetTokenDBManager();
 
-/**
- * POST /api/sessions/register
- * Registrar un nuevo usuario
- */
 router.post('/register', async (req, res) => {
     try {
         const { first_name, last_name, email, age, password, role } = req.body;
         
-        // Crear nuevo usuario
         const newUser = await UserService.createUser({
             first_name,
             last_name,
@@ -24,10 +24,8 @@ router.post('/register', async (req, res) => {
             role: role || 'user'
         });
         
-        // Generar token JWT
         const token = JWTUtils.generateToken(newUser);
         
-        // Guardar token en cookie HTTP-only
         res.cookie('tokencookie', token, { 
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000
@@ -47,10 +45,6 @@ router.post('/register', async (req, res) => {
     }
 });
 
-/**
- * POST /api/sessions/login
- * Login de usuario usando Passport Local Strategy  
- */
 router.post('/login', (req, res, next) => {
     passport.authenticate('local', (err, user, info) => {
         try {
@@ -69,10 +63,8 @@ router.post('/login', (req, res, next) => {
                 });
             }
             
-            // Generar token JWT
             const token = JWTUtils.generateToken(user);
             
-            // Guardar token en cookie HTTP-only
             res.cookie('tokencookie', token, { 
                 httpOnly: true,
                 maxAge: 24 * 60 * 60 * 1000
@@ -95,13 +87,14 @@ router.post('/login', (req, res, next) => {
     })(req, res, next);
 });
 
-/**
- * GET /api/sessions/current  (CRITERIO CLAVE)
- * Validar usuario actual usando current
- */
 router.get('/current', (req, res, next) => {
+    // Debugging: log cookies
+    console.log('Cookies recibidas:', req.cookies);
+    
     passport.authenticate('current', (err, user, info) => {
         try {
+            console.log('Current auth result - Error:', err, 'User:', !!user, 'Info:', info);
+            
             if (err) {
                 return res.status(500).send({
                     status: 'error',
@@ -113,17 +106,16 @@ router.get('/current', (req, res, next) => {
             if (!user) {
                 return res.status(401).send({
                     status: 'error',
-                    message: info.message || 'Token inválido o expirado'
+                    message: info?.message || 'Token inválido o expirado'
                 });
             }
             
-            // Devolver datos del usuario asociado al JWT
-            const userData = user.toJSON();
+            const userDTO = new CurrentUserDTO(user);
             
             res.status(200).send({
                 status: 'success',
                 message: 'Usuario autenticado',
-                ...userData
+                ...userDTO
             });
             
         } catch (error) {
@@ -137,10 +129,6 @@ router.get('/current', (req, res, next) => {
     })(req, res, next);
 });
 
-/**
- * POST /api/sessions/logout
- * Logout del usuario (limpiar cookie HTTP-only)
- */
 router.post('/logout', (req, res) => {
     try {
         // Limpiar cookie 
@@ -159,10 +147,6 @@ router.post('/logout', (req, res) => {
     }
 });
 
-/**
- * GET /api/sessions/profile
- * Obtener perfil del usuario autenticado
- */
 router.get('/profile', (req, res, next) => {
     passport.authenticate('jwt', { session: false }, (err, user, info) => {
         if (err) {
@@ -186,6 +170,117 @@ router.get('/profile', (req, res, next) => {
             payload: user.toJSON()
         });
     })(req, res, next);
+});
+
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).send({
+                status: 'error',
+                message: 'Email es requerido'
+            });
+        }
+
+        // Buscar usuario por email
+        const user = await UserService.getUserByEmail(email);
+        if (!user) {
+            return res.status(200).send({
+                status: 'success',
+                message: 'Si el email existe, se enviará un enlace de recuperación'
+            });
+        }
+
+const resetToken = await ResetTokenService.createResetToken(user._id);
+
+const resetUrl = `${req.protocol}://${req.get('host')}/api/sessions/reset-password?token=${resetToken.token}`;
+
+        // Enviar email
+        await mailingService.sendPasswordResetEmail(
+            user.email, 
+            resetUrl, 
+            `${user.first_name} ${user.last_name}`
+        );
+
+        res.status(200).send({
+            status: 'success',
+            message: 'Si el email existe, se enviará un enlace de recuperación',
+            ...(process.env.NODE_ENV === 'development' && {
+                devInfo: {
+                    token: resetToken.token,
+                    resetUrl: resetUrl,
+                    expiresAt: resetToken.expiresAt
+                }
+            })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en forgot-password:', error);
+        res.status(500).send({
+            status: 'error',
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).send({
+                status: 'error',
+                message: 'Token y nueva contraseña son requeridos'
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).send({
+                status: 'error',
+                message: 'La contraseña debe tener al menos 6 caracteres'
+            });
+        }
+
+        // Validar token
+        const resetToken = await ResetTokenService.findValidToken(token);
+        const user = resetToken.userId;
+
+        // Verificar que la nueva contraseña sea diferente a la actual
+        const isSamePassword = bcrypt.compareSync(newPassword, user.password);
+        if (isSamePassword) {
+            return res.status(400).send({
+                status: 'error',
+                message: 'La nueva contraseña debe ser diferente a la actual'
+            });
+        }
+
+const hashedPassword = bcrypt.hashSync(newPassword, bcrypt.genSaltSync(10));
+
+await UserService.updateUserPassword(user._id, hashedPassword);
+
+await ResetTokenService.markTokenAsUsed(token);
+
+        res.status(200).send({
+            status: 'success',
+            message: 'Contraseña restablecida exitosamente'
+        });
+
+    } catch (error) {
+        console.error('❌ Error en reset-password:', error);
+        
+        if (error.message === 'Token inválido o expirado') {
+            return res.status(400).send({
+                status: 'error',
+                message: 'Token inválido o expirado. Solicita un nuevo enlace de recuperación.'
+            });
+        }
+
+        res.status(500).send({
+            status: 'error',
+            message: 'Error interno del servidor'
+        });
+    }
 });
 
 export default router;

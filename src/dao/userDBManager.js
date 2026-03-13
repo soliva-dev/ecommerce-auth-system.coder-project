@@ -6,22 +6,18 @@ export class userDBManager {
         console.log("Working with users from database");
     }
     
-    // Crear un nuevo usuario
     async createUser(userData) {
         try {
-            // Verificar si el usuario ya existe
             const existingUser = await userModel.findOne({ email: userData.email });
             if (existingUser) {
                 throw new Error('El usuario ya existe con ese email');
             }
             
-            // Crear carrito para el nuevo usuario
             const newCart = new cartModel({
                 products: []
             });
             await newCart.save();
             
-            // Crear nuevo usuario con referencia al carrito
             const newUser = new userModel({
                 ...userData,
                 cart: newCart._id
@@ -36,7 +32,6 @@ export class userDBManager {
         }
     }
     
-    // Obtener usuario por email
     async getUserByEmail(email) {
         try {
             return await userModel.findOne({ email }).populate('cart');
@@ -45,7 +40,6 @@ export class userDBManager {
         }
     }
     
-    // Obtener usuario por ID
     async getUserById(id) {
         try {
             return await userModel.findById(id).populate('cart');
@@ -54,7 +48,6 @@ export class userDBManager {
         }
     }
     
-    // Obtener todos los usuarios
     async getAllUsers() {
         try {
             return await userModel.find().populate('cart').select('-password');
@@ -63,10 +56,8 @@ export class userDBManager {
         }
     }
     
-    // Actualizar usuario
     async updateUser(id, updateData) {
         try {
-            // No permitir actualizar la contraseña directamente (requiere hash)
             if (updateData.password) {
                 delete updateData.password;
             }
@@ -81,7 +72,6 @@ export class userDBManager {
         }
     }
     
-    // Eliminar usuario
     async deleteUser(id) {
         try {
             const user = await userModel.findById(id);
@@ -89,19 +79,16 @@ export class userDBManager {
                 throw new Error('Usuario no encontrado');
             }
             
-            // Eliminar el carrito asociado
             if (user.cart) {
                 await cartModel.findByIdAndDelete(user.cart);
             }
             
-            // Eliminar el usuario
             return await userModel.findByIdAndDelete(id);
         } catch (error) {
             throw error;
         }
     }
     
-    // Cambiar rol del usuario
     async changeUserRole(id, newRole) {
         try {
             return await userModel.findByIdAndUpdate(
@@ -110,6 +97,26 @@ export class userDBManager {
                 { new: true }
             ).populate('cart');
         } catch (error) {
+            throw error;
+        }
+    }
+
+    async updateUserPassword(id, hashedPassword) {
+        try {
+            const result = await userModel.findByIdAndUpdate(
+                id,
+                { password: hashedPassword },
+                { new: true }
+            );
+            
+            if (!result) {
+                throw new Error('Usuario no encontrado');
+            }
+            
+            console.log('✅ Contraseña actualizada para usuario:', result.email);
+            return result;
+        } catch (error) {
+            console.error('❌ Error actualizando contraseña:', error);
             throw error;
         }
     }

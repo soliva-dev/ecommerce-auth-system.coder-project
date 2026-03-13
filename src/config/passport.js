@@ -8,8 +8,10 @@ const UserService = new userDBManager();
 // Extractor personalizado para cookies (siguiendo el patron usado en clases)
 const cookieExtractor = (req) => {
     let token = null;
+    console.log('CookieExtractor - req.cookies:', req.cookies);
     if (req && req.cookies) {
         token = req.cookies['tokencookie'] || null;
+        console.log('CookieExtractor - token encontrado:', token ? 'Sí' : 'No');
     }
     return token;
 };

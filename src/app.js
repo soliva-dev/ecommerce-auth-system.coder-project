@@ -23,7 +23,6 @@ const app = express();
 const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/entrega-final';
 mongoose.connect(uri);
 
-// Event listeners para MongoDB
 mongoose.connection.on('connected', () => {
     console.log('✅ Conectado a MongoDB Atlas exitosamente');
 });
@@ -32,12 +31,10 @@ mongoose.connection.on('error', (error) => {
     console.error('❌ Error en la conexión a MongoDB:', error);
 });
 
-//Handlebars Config
 app.engine('handlebars', handlebars.engine());
 app.set('views', __dirname + '/../views');
 app.set('view engine', 'handlebars');
 
-//Middlewares
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
@@ -46,14 +43,12 @@ app.use(express.static('public'));
 // Configurar Passport
 app.use(passport.initialize());
 
-//Routers
 app.use('/api/products', productRouter);
 app.use('/api/carts', cartRouter);
 app.use('/api/sessions', sessionRouter);
 app.use('/api/users', userRouter);
 app.use('/', viewsRouter);
 
-// Ruta de salud del servidor
 app.get('/health', (req, res) => {
     res.json({
         success: true,

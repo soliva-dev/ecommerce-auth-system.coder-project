@@ -1,37 +1,44 @@
 import { Router } from 'express';
 import { productDBManager } from '../dao/productDBManager.js';
+import { ProductRepository } from '../repository/productRepository.js';
 import { uploader } from '../utils/multerUtil.js';
+import { authenticateCurrent, adminOnlyProducts } from '../middlewares/auth.js';
 
 const router = Router();
-const ProductService = new productDBManager();
+const ProductDAO = new productDBManager();
+const ProductRepo = new ProductRepository(ProductDAO);
 
 router.get('/', async (req, res) => {
-    const result = await ProductService.getAllProducts(req.query);
-
-    res.send({
-        status: 'success',
-        payload: result
-    });
-});
-
-router.get('/:pid', async (req, res) => {
-
     try {
-        const result = await ProductService.getProductByID(req.params.pid);
+        const result = await ProductRepo.getAllProducts(req.query);
         res.send({
             status: 'success',
             payload: result
         });
     } catch (error) {
-        res.status(400).send({
+        res.status(500).send({
             status: 'error',
             message: error.message
         });
     }
 });
 
-router.post('/', uploader.array('thumbnails', 3), async (req, res) => {
+router.get('/:pid', async (req, res) => {
+    try {
+        const result = await ProductRepo.getProductById(req.params.pid);
+        res.send({
+            status: 'success',
+            payload: result
+        });
+    } catch (error) {
+        res.status(404).send({
+            status: 'error',
+            message: error.message
+        });
+    }
+});
 
+router.post('/', authenticateCurrent, adminOnlyProducts, uploader.array('thumbnails', 3), async (req, res) => {
     if (req.files) {
         req.body.thumbnails = [];
         req.files.forEach((file) => {
@@ -40,9 +47,10 @@ router.post('/', uploader.array('thumbnails', 3), async (req, res) => {
     }
 
     try {
-        const result = await ProductService.createProduct(req.body);
-        res.send({
+        const result = await ProductRepo.createProduct(req.body);
+        res.status(201).send({
             status: 'success',
+            message: 'Producto creado exitosamente',
             payload: result
         });
     } catch (error) {
@@ -53,19 +61,19 @@ router.post('/', uploader.array('thumbnails', 3), async (req, res) => {
     }
 });
 
-router.put('/:pid', uploader.array('thumbnails', 3), async (req, res) => {
-
+router.put('/:pid', authenticateCurrent, adminOnlyProducts, uploader.array('thumbnails', 3), async (req, res) => {
     if (req.files) {
         req.body.thumbnails = [];
         req.files.forEach((file) => {
-            req.body.thumbnails.push(file.filename);
+            req.body.thumbnails.push(file.path);
         });
     }
 
     try {
-        const result = await ProductService.updateProduct(req.params.pid, req.body);
+        const result = await ProductRepo.updateProduct(req.params.pid, req.body);
         res.send({
             status: 'success',
+            message: 'Producto actualizado exitosamente',
             payload: result
         });
     } catch (error) {
@@ -76,13 +84,12 @@ router.put('/:pid', uploader.array('thumbnails', 3), async (req, res) => {
     }
 });
 
-router.delete('/:pid', async (req, res) => {
-
+router.delete('/:pid', authenticateCurrent, adminOnlyProducts, async (req, res) => {
     try {
-        const result = await ProductService.deleteProduct(req.params.pid);
+        await ProductRepo.deleteProduct(req.params.pid);
         res.send({
             status: 'success',
-            payload: result
+            message: 'Producto eliminado exitosamente'
         });
     } catch (error) {
         res.status(400).send({
